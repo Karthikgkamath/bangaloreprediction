@@ -2,12 +2,11 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { 
   auth, 
   signInWithGoogle, 
-  signInWithEmail as firebaseSignInWithEmail, 
-  signUpWithEmail as firebaseSignUpWithEmail,
-  logOut as firebaseLogOut
+  signInWithEmail, 
+  signUpWithEmail,
+  logOut,
+  User
 } from "@/lib/firebase";
-import { User } from "firebase/auth";
-import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 interface AuthContextType {
@@ -43,47 +42,101 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     console.log("Setting up auth state listener");
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
       console.log("Auth state changed", user ? "User logged in" : "No user");
       setCurrentUser(user);
-      
-      if (user) {
-        try {
-          // Get firebase token
-          const token = await user.getIdToken();
-          console.log("Token obtained successfully");
-          
-          try {
-            // Verify token with our backend
-            await apiRequest('POST', '/api/auth/verify', { token });
-            console.log("Token verified with backend");
-          } catch (error) {
-            console.error("Failed to verify token with backend:", error);
-            toast({
-              variant: "destructive",
-              title: "Authentication Error",
-              description: "There was a problem authenticating your session. Please log in again."
-            });
-            await firebaseLogOut();
-          }
-        } catch (error) {
-          console.error("Failed to get ID token:", error);
-        }
-      }
-      
       setLoading(false);
     });
 
     return unsubscribe;
-  }, [toast]);
+  }, []);
+
+  // Handle Google sign in
+  const handleSignInWithGoogle = async () => {
+    try {
+      const user = await signInWithGoogle();
+      toast({
+        title: "Success!",
+        description: "You have successfully signed in with Google.",
+      });
+      return user;
+    } catch (error) {
+      console.error("Error signing in with Google:", error);
+      toast({
+        variant: "destructive",
+        title: "Sign In Failed",
+        description: "Could not sign in with Google. Please try again.",
+      });
+      throw error;
+    }
+  };
+
+  // Handle Email/Password sign in
+  const handleSignInWithEmail = async (email: string, password: string) => {
+    try {
+      const user = await signInWithEmail(email, password);
+      toast({
+        title: "Success!",
+        description: "You have successfully signed in.",
+      });
+      return user;
+    } catch (error) {
+      console.error("Error signing in with email/password:", error);
+      toast({
+        variant: "destructive", 
+        title: "Sign In Failed",
+        description: "Invalid email or password. Please try again.",
+      });
+      throw error;
+    }
+  };
+
+  // Handle Email/Password sign up
+  const handleSignUpWithEmail = async (email: string, password: string) => {
+    try {
+      const user = await signUpWithEmail(email, password);
+      toast({
+        title: "Account Created!",
+        description: "Your account has been created successfully.",
+      });
+      return user;
+    } catch (error) {
+      console.error("Error signing up with email/password:", error);
+      toast({
+        variant: "destructive",
+        title: "Sign Up Failed",
+        description: "Could not create your account. Please try again.",
+      });
+      throw error;
+    }
+  };
+
+  // Handle logout
+  const handleLogOut = async () => {
+    try {
+      await logOut();
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+      });
+    } catch (error) {
+      console.error("Error signing out:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not log out. Please try again.",
+      });
+      throw error;
+    }
+  };
 
   const value = {
     currentUser,
     loading,
-    signInWithGoogle,
-    signInWithEmail: firebaseSignInWithEmail,
-    signUpWithEmail: firebaseSignUpWithEmail,
-    logOut: firebaseLogOut
+    signInWithGoogle: handleSignInWithGoogle,
+    signInWithEmail: handleSignInWithEmail,
+    signUpWithEmail: handleSignUpWithEmail,
+    logOut: handleLogOut
   };
 
   return (

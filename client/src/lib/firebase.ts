@@ -1,66 +1,102 @@
-import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, User } from "firebase/auth";
+// Mock Firebase Auth without requiring actual Firebase
+// This file provides a simplified auth system that doesn't require Firebase credentials
 
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.firebaseapp.com`,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.appspot.com`,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+// Define our mock User type to match Firebase User interface
+export interface User {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  emailVerified: boolean;
+  getIdToken: () => Promise<string>;
+}
+
+// Mock auth state
+let currentUser: User | null = null;
+const listeners: Array<(user: User | null) => void> = [];
+
+// Mock auth object
+export const auth = {
+  currentUser,
+  onAuthStateChanged: (callback: (user: User | null) => void) => {
+    // Add the callback to listeners
+    listeners.push(callback);
+    // Immediately call with current state
+    setTimeout(() => callback(currentUser), 0);
+    // Return a function to unsubscribe
+    return () => {
+      const index = listeners.indexOf(callback);
+      if (index !== -1) listeners.splice(index, 1);
+    };
+  },
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const googleProvider = new GoogleAuthProvider();
+// Helper to update all listeners
+const updateAuthState = (user: User | null) => {
+  currentUser = user;
+  listeners.forEach(callback => callback(user));
+};
 
-// Sign in with Google
-export const signInWithGoogle = async () => {
-  try {
-    const result = await signInWithPopup(auth, googleProvider);
-    return result.user;
-  } catch (error) {
-    console.error("Error signing in with Google: ", error);
-    throw error;
-  }
+// Sign in with Google (mock)
+export const signInWithGoogle = async (): Promise<User> => {
+  console.log("Mock sign in with Google");
+  const mockUser: User = {
+    uid: "google-user-123",
+    email: "user@example.com",
+    displayName: "Demo User",
+    photoURL: "https://api.dicebear.com/6.x/avataaars/svg?seed=user@example.com",
+    emailVerified: true,
+    getIdToken: async () => "mock-id-token-123",
+  };
+  updateAuthState(mockUser);
+  return mockUser;
 };
 
 // Sign in with email and password
-export const signInWithEmail = async (email: string, password: string) => {
-  try {
-    const result = await signInWithEmailAndPassword(auth, email, password);
-    return result.user;
-  } catch (error) {
-    console.error("Error signing in with email and password: ", error);
-    throw error;
+export const signInWithEmail = async (email: string, password: string): Promise<User> => {
+  console.log(`Mock sign in with email: ${email}`);
+  if (password.length < 6) {
+    throw new Error("Password must be at least 6 characters");
   }
+  
+  const mockUser: User = {
+    uid: `email-user-${email.replace('@', '-at-')}`,
+    email: email,
+    displayName: email.split('@')[0],
+    photoURL: `https://api.dicebear.com/6.x/avataaars/svg?seed=${email}`,
+    emailVerified: true,
+    getIdToken: async () => "mock-id-token-456",
+  };
+  updateAuthState(mockUser);
+  return mockUser;
 };
 
 // Sign up with email and password
-export const signUpWithEmail = async (email: string, password: string) => {
-  try {
-    const result = await createUserWithEmailAndPassword(auth, email, password);
-    return result.user;
-  } catch (error) {
-    console.error("Error signing up with email and password: ", error);
-    throw error;
+export const signUpWithEmail = async (email: string, password: string): Promise<User> => {
+  console.log(`Mock sign up with email: ${email}`);
+  if (password.length < 6) {
+    throw new Error("Password must be at least 6 characters");
   }
+  
+  const mockUser: User = {
+    uid: `email-user-${email.replace('@', '-at-')}`,
+    email: email,
+    displayName: email.split('@')[0],
+    photoURL: `https://api.dicebear.com/6.x/avataaars/svg?seed=${email}`,
+    emailVerified: true,
+    getIdToken: async () => "mock-id-token-789",
+  };
+  updateAuthState(mockUser);
+  return mockUser;
 };
 
 // Sign out
-export const logOut = async () => {
-  try {
-    await signOut(auth);
-  } catch (error) {
-    console.error("Error signing out: ", error);
-    throw error;
-  }
+export const logOut = async (): Promise<void> => {
+  console.log("Mock sign out");
+  updateAuthState(null);
 };
 
 // Get the current user
 export const getCurrentUser = (): User | null => {
-  return auth.currentUser;
+  return currentUser;
 };
-
-export { auth };
-export default app;
