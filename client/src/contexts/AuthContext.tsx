@@ -42,24 +42,32 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log("Setting up auth state listener");
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      console.log("Auth state changed", user ? "User logged in" : "No user");
       setCurrentUser(user);
       
       if (user) {
-        // Get firebase token
-        const token = await user.getIdToken();
-        
         try {
-          // Verify token with our backend
-          await apiRequest('POST', '/api/auth/verify', { token });
+          // Get firebase token
+          const token = await user.getIdToken();
+          console.log("Token obtained successfully");
+          
+          try {
+            // Verify token with our backend
+            await apiRequest('POST', '/api/auth/verify', { token });
+            console.log("Token verified with backend");
+          } catch (error) {
+            console.error("Failed to verify token with backend:", error);
+            toast({
+              variant: "destructive",
+              title: "Authentication Error",
+              description: "There was a problem authenticating your session. Please log in again."
+            });
+            await firebaseLogOut();
+          }
         } catch (error) {
-          console.error("Failed to verify token with backend:", error);
-          toast({
-            variant: "destructive",
-            title: "Authentication Error",
-            description: "There was a problem authenticating your session. Please log in again."
-          });
-          await firebaseLogOut();
+          console.error("Failed to get ID token:", error);
         }
       }
       
@@ -80,7 +88,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }
