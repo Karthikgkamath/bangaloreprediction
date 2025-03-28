@@ -1,10 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { Button } from './ui/button';
-import { Plus, Minus, Cloud } from 'lucide-react';
 
-// Define Bangalore regions
 interface Region {
   id: string;
   name: string;
@@ -12,307 +9,315 @@ interface Region {
   color: string;
 }
 
-const regions: Region[] = [
-  { id: 'indiranagar', name: 'Indiranagar', position: { x: 1.5, y: 0.1, z: 0.5 }, color: '#a78bfa' },
-  { id: 'koramangala', name: 'Koramangala', position: { x: 0.5, y: 0.1, z: 0.5 }, color: '#a78bfa' },
-  { id: 'jayanagar', name: 'Jayanagar', position: { x: -0.5, y: 0.1, z: 1.0 }, color: '#a78bfa' },
-  { id: 'whitefield', name: 'Whitefield', position: { x: 2.0, y: 0.1, z: -0.5 }, color: '#a78bfa' },
-  { id: 'electronic-city', name: 'Electronic City', position: { x: 0.0, y: 0.1, z: 2.0 }, color: '#a78bfa' },
-  { id: 'rajajinagar', name: 'Rajajinagar', position: { x: -1.0, y: 0.1, z: -0.5 }, color: '#a78bfa' },
-  { id: 'hebbal', name: 'Hebbal', position: { x: 0.0, y: 0.1, z: -1.5 }, color: '#a78bfa' },
-];
-
 interface BangaloreMapProps {
   onSelectRegion: (region: string) => void;
 }
 
 export default function BangaloreMap({ onSelectRegion }: BangaloreMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
+  const regionsRef = useRef<THREE.Mesh[]>([]);
+  const raycasterRef = useRef<THREE.Raycaster>(new THREE.Raycaster());
+  const mouseRef = useRef<THREE.Vector2>(new THREE.Vector2());
+  const [hoveredRegion, setHoveredRegion] = useState<string | null>(null);
   const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
-  const [scene, setScene] = useState<THREE.Scene | null>(null);
-  const [camera, setCamera] = useState<THREE.PerspectiveCamera | null>(null);
-  const [renderer, setRenderer] = useState<THREE.WebGLRenderer | null>(null);
-  const [controls, setControls] = useState<OrbitControls | null>(null);
 
-  // Initialize Three.js scene
+  // Define Bangalore regions
+  const regions: Region[] = [
+    { id: 'indiranagar', name: 'Indiranagar', position: { x: 0.5, y: 0.1, z: 0.2 }, color: '#FF6B6B' },
+    { id: 'koramangala', name: 'Koramangala', position: { x: 0.3, y: 0.05, z: -0.2 }, color: '#4ECDC4' },
+    { id: 'jayanagar', name: 'Jayanagar', position: { x: -0.2, y: 0, z: -0.3 }, color: '#FFD166' },
+    { id: 'whitefield', name: 'Whitefield', position: { x: 1, y: 0.2, z: 0.5 }, color: '#6A0572' },
+    { id: 'electronic-city', name: 'Electronic City', position: { x: -0.5, y: 0.1, z: -0.8 }, color: '#1A535C' },
+    { id: 'rajajinagar', name: 'Rajajinagar', position: { x: -0.7, y: 0.15, z: 0.3 }, color: '#F5587B' },
+    { id: 'hebbal', name: 'Hebbal', position: { x: 0, y: 0.25, z: 0.8 }, color: '#00A8E8' },
+  ];
+  
   useEffect(() => {
+    // Skip if container ref isn't available yet
     if (!containerRef.current) return;
-
+    
+    // Get container dimensions
+    const container = containerRef.current;
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+    
     // Create scene
-    const newScene = new THREE.Scene();
-    newScene.background = new THREE.Color(0x111827); // Dark background
-
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x111111);
+    sceneRef.current = scene;
+    
     // Create camera
-    const newCamera = new THREE.PerspectiveCamera(
-      75,
-      containerRef.current.clientWidth / containerRef.current.clientHeight,
-      0.1,
-      1000
-    );
-    newCamera.position.set(3, 4, 3);
-
+    const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+    camera.position.set(0, 1.5, 2);
+    cameraRef.current = camera;
+    
     // Create renderer
-    const newRenderer = new THREE.WebGLRenderer({ antialias: true });
-    newRenderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
-    newRenderer.setPixelRatio(window.devicePixelRatio);
-    containerRef.current.appendChild(newRenderer.domElement);
-
-    // Create controls
-    const newControls = new OrbitControls(newCamera, newRenderer.domElement);
-    newControls.enableDamping = true;
-    newControls.dampingFactor = 0.05;
-    newControls.minDistance = 3;
-    newControls.maxDistance = 10;
-    newControls.maxPolarAngle = Math.PI / 2;
-
-    setScene(newScene);
-    setCamera(newCamera);
-    setRenderer(newRenderer);
-    setControls(newControls);
-
-    // Create base plane (Bangalore map base)
-    const planeGeometry = new THREE.CircleGeometry(3, 64);
-    const planeMaterial = new THREE.MeshBasicMaterial({ 
-      color: 0x1e293b,
-      side: THREE.DoubleSide,
-    });
-    const plane = new THREE.Mesh(planeGeometry, planeMaterial);
-    plane.rotation.x = -Math.PI / 2; // Rotate to be horizontal
-    newScene.add(plane);
-
-    // Add grid for reference
-    const grid = new THREE.GridHelper(6, 20, 0x6b7280, 0x4b5563);
-    newScene.add(grid);
-
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    container.appendChild(renderer.domElement);
+    rendererRef.current = renderer;
+    
+    // Add controls
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enablePan = false;
+    controls.minDistance = 1.5;
+    controls.maxDistance = 3;
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controlsRef.current = controls;
+    
     // Add ambient light
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-    newScene.add(ambientLight);
-
+    scene.add(ambientLight);
+    
     // Add directional light
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(5, 10, 5);
-    newScene.add(directionalLight);
-
-    // Add point markers for regions
-    regions.forEach(region => {
-      const markerGeometry = new THREE.SphereGeometry(0.1, 32, 32);
-      const markerMaterial = new THREE.MeshBasicMaterial({ color: region.color });
-      const marker = new THREE.Mesh(markerGeometry, markerMaterial);
-      marker.position.set(region.position.x, region.position.y, region.position.z);
-      marker.userData = { id: region.id, name: region.name };
-      newScene.add(marker);
-
-      // Add text label
-      const textDiv = document.createElement('div');
-      textDiv.className = 'absolute bg-slate-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap pointer-events-none opacity-0 transition-opacity';
-      textDiv.textContent = region.name;
-      textDiv.style.transition = 'opacity 0.2s';
-      textDiv.dataset.regionId = region.id;
-      containerRef.current.appendChild(textDiv);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(1, 1, 1);
+    scene.add(directionalLight);
+    
+    // Create a base plane for the city
+    const planeGeometry = new THREE.CircleGeometry(1, 32);
+    const planeMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0x222222, 
+      roughness: 0.8,
+      metalness: 0.2,
+      transparent: true,
+      opacity: 0.7
     });
-
-    // Create raycaster for interaction
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-
-    // Handle window resize
-    const handleResize = () => {
-      if (!containerRef.current || !newCamera || !newRenderer) return;
-      
-      newCamera.aspect = containerRef.current.clientWidth / containerRef.current.clientHeight;
-      newCamera.updateProjectionMatrix();
-      newRenderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
-    };
-
-    window.addEventListener('resize', handleResize);
-
-    // Handle mouse move for tooltips
-    const handleMouseMove = (event: MouseEvent) => {
-      if (!containerRef.current || !newCamera || !newScene || !newRenderer) return;
-
-      // Calculate mouse position in normalized device coordinates
-      const rect = containerRef.current.getBoundingClientRect();
-      mouse.x = ((event.clientX - rect.left) / containerRef.current.clientWidth) * 2 - 1;
-      mouse.y = -((event.clientY - rect.top) / containerRef.current.clientHeight) * 2 + 1;
-
-      // Update the picking ray with the camera and mouse position
-      raycaster.setFromCamera(mouse, newCamera);
-
-      // Calculate objects intersecting the picking ray
-      const intersects = raycaster.intersectObjects(newScene.children);
-
-      // Hide all tooltips first
-      document.querySelectorAll('[data-region-id]').forEach(el => {
-        (el as HTMLElement).style.opacity = '0';
+    const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+    plane.rotation.x = -Math.PI / 2;
+    plane.position.y = -0.1;
+    scene.add(plane);
+    
+    // Create connection lines between regions
+    const createConnectionLine = (start: THREE.Vector3, end: THREE.Vector3) => {
+      const lineMaterial = new THREE.LineBasicMaterial({ 
+        color: 0x444444, 
+        transparent: true, 
+        opacity: 0.3 
       });
-
-      // Show tooltip for the hovered region
-      if (intersects.length > 0) {
-        const intersectedObject = intersects[0].object;
-        if (intersectedObject.userData && intersectedObject.userData.id) {
-          containerRef.current.style.cursor = 'pointer';
-          
-          // Get 2D position for the tooltip
-          const position = new THREE.Vector3();
-          position.copy(intersectedObject.position);
-          position.project(newCamera);
-          
-          const tooltip = document.querySelector(`[data-region-id="${intersectedObject.userData.id}"]`) as HTMLElement;
-          if (tooltip) {
-            const x = (position.x * 0.5 + 0.5) * containerRef.current.clientWidth;
-            const y = (-(position.y * 0.5) + 0.5) * containerRef.current.clientHeight;
-            
-            tooltip.style.left = `${x}px`;
-            tooltip.style.top = `${y - 30}px`; // Offset above the marker
-            tooltip.style.opacity = '1';
-          }
-        } else {
-          containerRef.current.style.cursor = 'auto';
+      const points = [start, end];
+      const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+      const line = new THREE.Line(lineGeometry, lineMaterial);
+      scene.add(line);
+    };
+    
+    // Create region markers
+    const regionMeshes: THREE.Mesh[] = [];
+    
+    regions.forEach((region, index) => {
+      // Create marker geometry
+      const geometry = new THREE.CylinderGeometry(0.08, 0.08, 0.05, 16);
+      
+      // Create materials for different states
+      const defaultMaterial = new THREE.MeshStandardMaterial({ 
+        color: new THREE.Color(region.color),
+        roughness: 0.7,
+        metalness: 0.3,
+        transparent: true,
+        opacity: 0.85
+      });
+      
+      // Create mesh
+      const mesh = new THREE.Mesh(geometry, defaultMaterial);
+      mesh.position.set(region.position.x, region.position.y, region.position.z);
+      mesh.userData = { id: region.id };
+      scene.add(mesh);
+      regionMeshes.push(mesh);
+      
+      // Create text label for the marker
+      const labelDiv = document.createElement('div');
+      labelDiv.className = 'absolute pointer-events-none py-1 px-2 bg-slate-800/80 text-white text-sm rounded-md hidden';
+      labelDiv.textContent = region.name;
+      container.appendChild(labelDiv);
+      
+      // Store label reference in mesh userData
+      mesh.userData.label = labelDiv;
+      
+      // Create connections between regions (not all, just some for visual effect)
+      if (index > 0) {
+        const prevRegion = regions[index - 1];
+        createConnectionLine(
+          new THREE.Vector3(region.position.x, region.position.y, region.position.z),
+          new THREE.Vector3(prevRegion.position.x, prevRegion.position.y, prevRegion.position.z)
+        );
+      }
+    });
+    
+    // Store regions for later interaction
+    regionsRef.current = regionMeshes;
+    
+    // Handle mouse move for hover effect
+    const handleMouseMove = (event: MouseEvent) => {
+      // Calculate normalized device coordinates
+      const rect = container.getBoundingClientRect();
+      mouseRef.current.x = ((event.clientX - rect.left) / width) * 2 - 1;
+      mouseRef.current.y = -((event.clientY - rect.top) / height) * 2 + 1;
+      
+      // Reset all labels to hidden
+      regionMeshes.forEach(mesh => {
+        if (mesh.userData.label) {
+          mesh.userData.label.classList.add('hidden');
         }
+      });
+      
+      // Check for intersections
+      raycasterRef.current.setFromCamera(mouseRef.current, camera);
+      const intersects = raycasterRef.current.intersectObjects(regionMeshes);
+      
+      if (intersects.length > 0) {
+        const intersectedObject = intersects[0].object as THREE.Mesh;
+        const regionId = intersectedObject.userData.id as string;
+        
+        // Show label for hovered region
+        if (intersectedObject.userData.label) {
+          const labelDiv = intersectedObject.userData.label as HTMLDivElement;
+          labelDiv.classList.remove('hidden');
+          
+          // Position label on screen
+          const vector = new THREE.Vector3();
+          intersectedObject.updateMatrixWorld();
+          vector.setFromMatrixPosition(intersectedObject.matrixWorld);
+          vector.project(camera);
+          
+          const x = (vector.x * 0.5 + 0.5) * width;
+          const y = -(vector.y * 0.5 - 0.5) * height;
+          
+          labelDiv.style.transform = `translate(-50%, -100%) translate(${x}px, ${y - 10}px)`;
+        }
+        
+        // Set hovered region
+        setHoveredRegion(regionId);
+        
+        // Change cursor style
+        container.style.cursor = 'pointer';
       } else {
-        containerRef.current.style.cursor = 'auto';
+        setHoveredRegion(null);
+        container.style.cursor = 'grab';
       }
     };
-
-    // Handle mouse click for region selection
+    
+    // Handle click to select region
     const handleClick = (event: MouseEvent) => {
-      if (!containerRef.current || !newCamera || !newScene) return;
-
-      // Calculate mouse position in normalized device coordinates
-      const rect = containerRef.current.getBoundingClientRect();
-      mouse.x = ((event.clientX - rect.left) / containerRef.current.clientWidth) * 2 - 1;
-      mouse.y = -((event.clientY - rect.top) / containerRef.current.clientHeight) * 2 + 1;
-
-      // Update the picking ray with the camera and mouse position
-      raycaster.setFromCamera(mouse, newCamera);
-
-      // Calculate objects intersecting the picking ray
-      const intersects = raycaster.intersectObjects(newScene.children);
-
+      // Calculate normalized device coordinates
+      const rect = container.getBoundingClientRect();
+      mouseRef.current.x = ((event.clientX - rect.left) / width) * 2 - 1;
+      mouseRef.current.y = -((event.clientY - rect.top) / height) * 2 + 1;
+      
+      // Check for intersections
+      raycasterRef.current.setFromCamera(mouseRef.current, camera);
+      const intersects = raycasterRef.current.intersectObjects(regionMeshes);
+      
       if (intersects.length > 0) {
-        const intersectedObject = intersects[0].object;
-        if (intersectedObject.userData && intersectedObject.userData.id) {
-          const regionId = intersectedObject.userData.id;
-          setSelectedRegion(regionId);
-          onSelectRegion(regionId);
-          
-          // Highlight selected region
-          newScene.children.forEach(child => {
-            if (child instanceof THREE.Mesh && child.userData && child.userData.id) {
-              if (child.userData.id === regionId) {
-                (child.material as THREE.MeshBasicMaterial).color.set(0xec4899); // Highlight color
-                child.scale.set(1.5, 1.5, 1.5); // Make it bigger
-              } else {
-                (child.material as THREE.MeshBasicMaterial).color.set(regions.find(r => r.id === child.userData.id)?.color || 0xa78bfa);
-                child.scale.set(1, 1, 1); // Reset size
-              }
-            }
-          });
-        }
+        const intersectedObject = intersects[0].object as THREE.Mesh;
+        const regionId = intersectedObject.userData.id as string;
+        
+        // Set selected region and call the callback
+        setSelectedRegion(regionId);
+        onSelectRegion(regionId);
       }
     };
-
-    containerRef.current.addEventListener('mousemove', handleMouseMove);
-    containerRef.current.addEventListener('click', handleClick);
-
+    
     // Animation loop
     const animate = () => {
       requestAnimationFrame(animate);
-      if (newControls) newControls.update();
-      if (newRenderer && newScene && newCamera) newRenderer.render(newScene, newCamera);
       
-      // Subtle pulsing effect for markers
-      newScene.children.forEach(child => {
-        if (child instanceof THREE.Mesh && child.userData && child.userData.id) {
-          if (child.userData.id !== selectedRegion) {
-            child.position.y = region.position.y + Math.sin(Date.now() * 0.003) * 0.03;
-          }
+      if (controlsRef.current) {
+        controlsRef.current.update();
+      }
+      
+      // Update materials based on hover/selection state
+      regionMeshes.forEach(mesh => {
+        const material = mesh.material as THREE.MeshStandardMaterial;
+        const regionId = mesh.userData.id as string;
+        
+        if (selectedRegion === regionId) {
+          // Selected state
+          material.emissive.set(0xffffff);
+          material.emissiveIntensity = 0.5;
+          material.opacity = 1;
+        } else if (hoveredRegion === regionId) {
+          // Hovered state
+          material.emissive.set(0xffffff);
+          material.emissiveIntensity = 0.3;
+          material.opacity = 0.9;
+        } else {
+          // Default state
+          material.emissive.set(0x000000);
+          material.emissiveIntensity = 0;
+          material.opacity = 0.85;
+        }
+      });
+      
+      renderer.render(scene, camera);
+    };
+    
+    // Start animation loop
+    animate();
+    
+    // Add event listeners
+    container.addEventListener('mousemove', handleMouseMove);
+    container.addEventListener('click', handleClick);
+    
+    // Handle window resize
+    const handleResize = () => {
+      if (!containerRef.current || !cameraRef.current || !rendererRef.current) return;
+      
+      const newWidth = containerRef.current.clientWidth;
+      const newHeight = containerRef.current.clientHeight;
+      
+      cameraRef.current.aspect = newWidth / newHeight;
+      cameraRef.current.updateProjectionMatrix();
+      
+      rendererRef.current.setSize(newWidth, newHeight);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    
+    // Cleanup function
+    return () => {
+      if (rendererRef.current && rendererRef.current.domElement && container) {
+        container.removeChild(rendererRef.current.domElement);
+      }
+      
+      window.removeEventListener('resize', handleResize);
+      container.removeEventListener('mousemove', handleMouseMove);
+      container.removeEventListener('click', handleClick);
+      
+      // Remove label elements
+      regionMeshes.forEach(mesh => {
+        if (mesh.userData.label && container.contains(mesh.userData.label)) {
+          container.removeChild(mesh.userData.label);
         }
       });
     };
-    animate();
-
-    // Cleanup function
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      containerRef.current?.removeEventListener('mousemove', handleMouseMove);
-      containerRef.current?.removeEventListener('click', handleClick);
-      
-      if (containerRef.current) {
-        while (containerRef.current.firstChild) {
-          containerRef.current.removeChild(containerRef.current.firstChild);
-        }
-      }
-      
-      if (newRenderer) newRenderer.dispose();
-    };
-  }, [onSelectRegion]);
-
-  // Zoom controls
-  const handleZoomIn = () => {
-    if (camera) {
-      camera.position.multiplyScalar(0.9);
-      if (controls) controls.update();
+  }, [onSelectRegion, regions]);
+  
+  // Update the selected region when external prop changes
+  useEffect(() => {
+    if (selectedRegion) {
+      onSelectRegion(selectedRegion);
     }
-  };
-
-  const handleZoomOut = () => {
-    if (camera) {
-      camera.position.multiplyScalar(1.1);
-      if (controls) controls.update();
-    }
-  };
-
-  const handleReset = () => {
-    if (camera && controls) {
-      camera.position.set(3, 4, 3);
-      controls.reset();
-    }
-  };
-
+  }, [selectedRegion, onSelectRegion]);
+  
   return (
-    <div className="relative h-[400px] bg-slate-200 dark:bg-slate-800 rounded-lg overflow-hidden">
-      <div ref={containerRef} className="w-full h-full rounded-lg relative overflow-hidden">
-        {/* Three.js container */}
-      </div>
-      
-      {/* Controls overlay */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute bottom-4 right-4 bg-white dark:bg-slate-900 bg-opacity-80 dark:bg-opacity-80 backdrop-blur-sm rounded-lg p-2 pointer-events-auto">
-          <div className="flex space-x-2">
-            <Button 
-              onClick={handleZoomIn} 
-              variant="ghost" 
-              size="icon" 
-              className="p-2 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded"
-            >
-              <Plus className="h-5 w-5" />
-            </Button>
-            <Button 
-              onClick={handleZoomOut} 
-              variant="ghost" 
-              size="icon" 
-              className="p-2 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded"
-            >
-              <Minus className="h-5 w-5" />
-            </Button>
-            <Button 
-              onClick={handleReset} 
-              variant="ghost" 
-              size="icon" 
-              className="p-2 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 rounded"
-            >
-              <Cloud className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-      </div>
-      
-      {/* Selected region display */}
-      <div className="absolute bottom-4 left-4 bg-white dark:bg-slate-900 bg-opacity-80 dark:bg-opacity-80 backdrop-blur-sm rounded px-3 py-1 text-xs font-mono">
-        Selected: <span id="selected-region" className="text-primary-600 dark:text-primary-400 font-medium">
-          {selectedRegion ? regions.find(r => r.id === selectedRegion)?.name || 'None' : 'None'}
-        </span>
+    <div className="relative w-full h-[300px] md:h-[400px] rounded-lg overflow-hidden">
+      <div 
+        ref={containerRef} 
+        className="w-full h-full bg-slate-900 rounded-lg"
+        style={{ touchAction: 'pan-y' }}
+      ></div>
+      <div className="absolute bottom-3 left-3 text-xs bg-slate-800/80 text-slate-300 py-1 px-2 rounded">
+        {selectedRegion ? (
+          <span>Selected: {regions.find(r => r.id === selectedRegion)?.name || 'None'}</span>
+        ) : (
+          <span>Click on a region to select</span>
+        )}
       </div>
     </div>
   );
