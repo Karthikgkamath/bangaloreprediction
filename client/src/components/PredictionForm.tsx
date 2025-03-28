@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -41,6 +41,17 @@ export default function PredictionForm({
 }: PredictionFormProps) {
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Options for select inputs
+  const regions = [
+    { value: "indiranagar", label: "Indiranagar" },
+    { value: "koramangala", label: "Koramangala" },
+    { value: "jayanagar", label: "Jayanagar" },
+    { value: "whitefield", label: "Whitefield" },
+    { value: "electronic-city", label: "Electronic City" },
+    { value: "rajajinagar", label: "Rajajinagar" },
+    { value: "hebbal", label: "Hebbal" },
+  ];
+
   const form = useForm<PredictionFormValues>({
     resolver: zodResolver(predictionFormSchema),
     defaultValues: {
@@ -58,21 +69,22 @@ export default function PredictionForm({
     },
   });
 
-  // Update form when selectedRegion changes
-  if (selectedRegion !== form.getValues("region")) {
-    form.setValue("region", selectedRegion);
-  }
-
-  // Options for select inputs
-  const regions = [
-    { value: "indiranagar", label: "Indiranagar" },
-    { value: "koramangala", label: "Koramangala" },
-    { value: "jayanagar", label: "Jayanagar" },
-    { value: "whitefield", label: "Whitefield" },
-    { value: "electronic-city", label: "Electronic City" },
-    { value: "rajajinagar", label: "Rajajinagar" },
-    { value: "hebbal", label: "Hebbal" },
-  ];
+  // Update form when selectedRegion changes from external source (map)
+  // Using useEffect to avoid unnecessary re-renders
+  useEffect(() => {
+    if (selectedRegion && selectedRegion !== form.getValues("region")) {
+      form.setValue("region", selectedRegion);
+      
+      // Auto-fill approximate location based on region
+      const regionLabel = regions.find(r => r.value === selectedRegion)?.label;
+      if (regionLabel) {
+        // Only autofill if the location field is empty
+        if (!form.getValues("preciseLocation")) {
+          form.setValue("preciseLocation", `${regionLabel}, Bangalore`);
+        }
+      }
+    }
+  }, [selectedRegion, form, regions]);
 
   const bhkOptions = [
     { value: "1", label: "1 BHK" },

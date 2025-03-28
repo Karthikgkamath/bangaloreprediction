@@ -15,9 +15,8 @@ const loginSchema = z.object({
 });
 
 const signupSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Please enter a valid email address"),
+  username: z.string().min(1, "Username is required"),
+  email: z.string().min(1, "Email is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -48,8 +47,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
   const signupForm = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
-      firstName: "",
-      lastName: "",
+      username: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -194,43 +192,23 @@ export default function AuthModal({ onClose }: AuthModalProps) {
             ) : (
               <Form {...signupForm}>
                 <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={signupForm.control}
-                      name="firstName"
-                      render={({ field }) => (
-                        <FormItem className="space-y-2">
-                          <FormLabel>First Name</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              placeholder="John"
-                              className="w-full px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={signupForm.control}
-                      name="lastName"
-                      render={({ field }) => (
-                        <FormItem className="space-y-2">
-                          <FormLabel>Last Name</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              placeholder="Doe"
-                              className="w-full px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                  <FormField
+                    control={signupForm.control}
+                    name="username"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel>Username</FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field} 
+                            placeholder="johndoe"
+                            className="w-full px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   
                   <FormField
                     control={signupForm.control}
