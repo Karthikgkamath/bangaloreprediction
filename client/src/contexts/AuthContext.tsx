@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, SetStateAction, Dispatch } from "react";
 import { 
   auth, 
   signInWithGoogle, 
@@ -44,7 +44,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     console.log("Setting up auth state listener");
     const unsubscribe = auth.onAuthStateChanged((user) => {
       console.log("Auth state changed", user ? "User logged in" : "No user");
-      setCurrentUser(user);
+      if (user) {
+        setCurrentUser(user);
+      } else {
+        setCurrentUser(null);
+      }
       setLoading(false);
     });
 
@@ -130,7 +134,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const value = {
+  const value: AuthContextType = {
     currentUser,
     loading,
     signInWithGoogle: handleSignInWithGoogle,
