@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Dashboard from "@/pages/Dashboard";
-import { useAuth } from "./contexts/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ThemeProvider } from "./lib/theme";
 
 function Router() {
@@ -23,10 +23,12 @@ function App() {
   return (
     <ThemeProvider defaultTheme="dark">
       <QueryClientProvider client={queryClient}>
-        <div className="bg-mesh min-h-screen flex flex-col">
-          <Router />
-          <Toaster />
-        </div>
+        <AuthProvider>
+          <div className="bg-mesh min-h-screen flex flex-col">
+            <Router />
+            <Toaster />
+          </div>
+        </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );
