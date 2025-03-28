@@ -5,24 +5,9 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Dashboard from "@/pages/Dashboard";
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import Test from "@/pages/Test";  // Import our test page
+import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./lib/theme";
-
-function RouterWithAuth() {
-  const { currentUser, loading } = useAuth();
-
-  // Show a loading indicator if auth is still initializing
-  if (loading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
-  }
-
-  return (
-    <Switch>
-      <Route path="/" component={currentUser ? Dashboard : Home} />
-      <Route path="*" component={NotFound} />
-    </Switch>
-  );
-}
 
 function App() {
   return (
@@ -30,7 +15,12 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <div className="bg-mesh min-h-screen flex flex-col">
-            <RouterWithAuth />
+            <Switch>
+              <Route path="/" component={Test} />
+              <Route path="/home" component={Home} />
+              <Route path="/dashboard" component={Dashboard} />
+              <Route path="*" component={NotFound} />
+            </Switch>
             <Toaster />
           </div>
         </AuthProvider>
