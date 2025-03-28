@@ -14,7 +14,7 @@ interface AuthContextType {
   loading: boolean;
   signInWithGoogle: () => Promise<User>;
   signInWithEmail: (email: string, password: string) => Promise<User>;
-  signUpWithEmail: (email: string, password: string) => Promise<User>;
+  signUpWithEmail: (email: string, password: string, username?: string) => Promise<User>;
   logOut: () => Promise<void>;
 }
 
@@ -96,12 +96,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   // Handle Email/Password sign up
-  const handleSignUpWithEmail = async (email: string, password: string) => {
+  const handleSignUpWithEmail = async (email: string, password: string, username?: string) => {
     try {
-      const user = await signUpWithEmail(email, password);
+      const user = await signUpWithEmail(email, password, username);
       toast({
         title: "Account Created!",
-        description: "Your account has been created successfully.",
+        description: `Welcome, ${username || email.split('@')[0]}! Your account has been created successfully.`,
       });
       return user;
     } catch (error) {

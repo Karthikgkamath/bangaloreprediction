@@ -72,8 +72,8 @@ export const signInWithEmail = async (email: string, password: string): Promise<
 };
 
 // Sign up with email and password
-export const signUpWithEmail = async (email: string, password: string): Promise<User> => {
-  console.log(`Mock sign up with email: ${email}`);
+export const signUpWithEmail = async (email: string, password: string, username?: string): Promise<User> => {
+  console.log(`Mock sign up with email: ${email}, username: ${username || 'not provided'}`);
   if (password.length < 6) {
     throw new Error("Password must be at least 6 characters");
   }
@@ -81,7 +81,7 @@ export const signUpWithEmail = async (email: string, password: string): Promise<
   const mockUser: User = {
     uid: `email-user-${email.replace('@', '-at-')}`,
     email: email,
-    displayName: email.split('@')[0],
+    displayName: username || email.split('@')[0],
     photoURL: `https://api.dicebear.com/6.x/avataaars/svg?seed=${email}`,
     emailVerified: true,
     getIdToken: async () => "mock-id-token-789",
