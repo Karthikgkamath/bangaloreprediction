@@ -1,31 +1,16 @@
-import { Switch, Route } from "wouter";
-import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "@/components/ui/toaster";
-import NotFound from "@/pages/not-found";
-import Home from "@/pages/Home";
-import Dashboard from "@/pages/Dashboard";
-import Test from "@/pages/Test";  // Import our test page
-import { AuthProvider } from "./contexts/AuthContext";
-import { ThemeProvider } from "./lib/theme";
-
+// Super simple app component with no dependencies
 function App() {
   return (
-    <ThemeProvider defaultTheme="dark">
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <div className="bg-mesh min-h-screen flex flex-col">
-            <Switch>
-              <Route path="/" component={Test} />
-              <Route path="/home" component={Home} />
-              <Route path="/dashboard" component={Dashboard} />
-              <Route path="*" component={NotFound} />
-            </Switch>
-            <Toaster />
-          </div>
-        </AuthProvider>
-      </QueryClientProvider>
-    </ThemeProvider>
+    <div style={{ 
+      padding: "20px",
+      fontFamily: "Arial, sans-serif",
+      maxWidth: "800px",
+      margin: "0 auto",
+      textAlign: "center"
+    }}>
+      <h1 style={{ color: "#333" }}>Minimal Test Page</h1>
+      <p>If you can see this, React is rendering correctly!</p>
+    </div>
   );
 }
 
