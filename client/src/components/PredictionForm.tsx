@@ -11,8 +11,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { Prediction } from "@/types";
 
 const predictionFormSchema = z.object({
-  region: z.string().min(1, "Region is required"),
-  preciseLocation: z.string().min(1, "Precise location is required"),
+  region: z.string().default(""), // Hidden field, we'll extract it from the address
+  preciseLocation: z.string().min(1, "Location is required"),
   coordinates: z.object({
     lat: z.number(),
     lng: z.number()
@@ -125,14 +125,36 @@ export default function PredictionForm({
       
       // Try to determine the region from the address
       const address = selectedLocation.address.toLowerCase();
-      const matchedRegion = regions.find(region => 
-        address.includes(region.label.toLowerCase())
-      );
       
-      if (matchedRegion) {
-        form.setValue("region", matchedRegion.value);
-        setSelectedRegion(matchedRegion.value);
+      // Check if the address contains any of our known regions
+      let detectedRegion = "";
+      for (const region of regions) {
+        if (address.includes(region.label.toLowerCase())) {
+          detectedRegion = region.value;
+          break;
+        }
       }
+      
+      // If no specific region is found, try to extract area names from the address
+      if (!detectedRegion) {
+        // Extract area name by checking for common patterns in Bangalore addresses
+        const parts = address.split(',').map(part => part.trim().toLowerCase());
+        
+        // Check each part to see if it's a potential area name
+        for (const part of parts) {
+          // If it looks like an area name (no numbers, reasonable length)
+          if (part.length > 3 && part.length < 30 && !/\d/.test(part) && 
+              !['bangalore', 'bengaluru', 'karnataka', 'india'].includes(part)) {
+            // Use this as a custom region identifier
+            detectedRegion = part.replace(/\s+/g, '-');
+            break;
+          }
+        }
+      }
+      
+      // Set the detected region (or default to "bangalore" if nothing specific found)
+      form.setValue("region", detectedRegion || "bangalore");
+      setSelectedRegion(detectedRegion || "bangalore");
     }
   }, [selectedLocation, form, regions, setSelectedRegion]);
 
@@ -156,49 +178,24 @@ export default function PredictionForm({
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="region"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Region</FormLabel>
-                <Select 
-                  onValueChange={(value) => {
-                    field.onChange(value);
-                    setSelectedRegion(value);
-                  }}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select region" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {regions.map((region) => (
-                      <SelectItem key={region.value} value={region.value}>{region.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormDescription>
-                  Select a region or click on the map
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* Region field is hidden and auto-filled from preciseLocation */}
+          <input type="hidden" {...form.register("region")} />
           
           <FormField
             control={form.control}
             name="preciseLocation"
             render={({ field }) => (
-              <FormItem>
-                <FormLabel>Precise Location</FormLabel>
+              <FormItem className="md:col-span-2">
+                <FormLabel>Location</FormLabel>
                 <FormControl>
-                  <Input {...field} />
+                  <Input 
+                    {...field} 
+                    className="w-full"
+                    placeholder="Click on the map to select a location"
+                  />
                 </FormControl>
                 <FormDescription>
-                  Address from map selection or enter manually
+                  Address is automatically filled when you click on the map
                 </FormDescription>
                 <FormMessage />
               </FormItem>

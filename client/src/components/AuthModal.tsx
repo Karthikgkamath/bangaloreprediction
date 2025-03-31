@@ -10,13 +10,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 const loginSchema = z.object({
-  email: z.string().min(3, "Email is required"),
+  email: z.string().email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
 });
 
 const signupSchema = z.object({
   username: z.string().min(1, "Username is required"),
-  email: z.string().min(3, "Email is required"),
+  email: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
 }).refine((data) => data.password === data.confirmPassword, {
