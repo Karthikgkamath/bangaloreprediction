@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,26 +10,20 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 const loginSchema = z.object({
-  username: z.string().trim().min(1, "Username is required"),
+  username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
 });
 
 const signupSchema = z.object({
-  username: z.string().trim().min(1, "Username is required"),
+  username: z.string().min(1, "Username is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string().min(1, "Please confirm your password"),
-}).superRefine((data, ctx) => {
-  // First check if both password fields are filled
-  if (!data.password || !data.confirmPassword) return;
-  
-  // Then check if they match
-  if (data.password !== data.confirmPassword) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: "Passwords do not match",
-      path: ["confirmPassword"]
-    });
-  }
+}).refine((data) => {
+  // Only check if passwords match when both are filled
+  return !data.password || !data.confirmPassword || data.password === data.confirmPassword;
+}, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"]
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -50,7 +44,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
       username: "",
       password: "",
     },
-    mode: "onChange", // Validate on change for better UX
+    mode: "onBlur", // Only validate when field loses focus
   });
 
   const signupForm = useForm<SignupFormValues>({
@@ -60,12 +54,15 @@ export default function AuthModal({ onClose }: AuthModalProps) {
       password: "",
       confirmPassword: "",
     },
-    mode: "onChange", // Validate on change for better UX
+    mode: "onBlur", // Only validate when field loses focus
   });
 
-  // Debug form state
-  console.log("Signup form errors:", signupForm.formState.errors);
-  console.log("Form values:", signupForm.watch());
+  // Reset forms when switching tabs
+  const handleFormSwitch = (switchToLogin: boolean) => {
+    loginForm.reset();
+    signupForm.reset();
+    setIsLogin(switchToLogin);
+  };
 
   const onLoginSubmit = async (data: LoginFormValues) => {
     try {
@@ -179,7 +176,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
             
             <div className="flex mb-6 border-b border-slate-200 dark:border-slate-700">
               <button 
-                onClick={() => setIsLogin(true)}
+                onClick={() => handleFormSwitch(true)}
                 className={`px-4 py-2 font-medium text-sm ${isLogin 
                   ? 'border-b-2 border-primary-600 text-primary-600' 
                   : 'text-slate-600 dark:text-slate-400'}`}
@@ -187,7 +184,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                 Login
               </button>
               <button 
-                onClick={() => setIsLogin(false)}
+                onClick={() => handleFormSwitch(false)}
                 className={`px-4 py-2 font-medium text-sm ${!isLogin 
                   ? 'border-b-2 border-primary-600 text-primary-600' 
                   : 'text-slate-600 dark:text-slate-400'}`}
