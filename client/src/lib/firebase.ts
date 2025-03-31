@@ -52,18 +52,18 @@ export const signInWithGoogle = async (): Promise<User> => {
   return mockUser;
 };
 
-// Sign in with email and password
-export const signInWithEmail = async (email: string, password: string): Promise<User> => {
-  console.log(`Mock sign in with email: ${email}`);
+// Sign in with username and password
+export const signInWithEmail = async (username: string, password: string): Promise<User> => {
+  console.log(`Mock sign in with username: ${username}`);
   if (password.length < 6) {
     throw new Error("Password must be at least 6 characters");
   }
   
   const mockUser: User = {
-    uid: `email-user-${email.replace('@', '-at-')}`,
-    email: email,
-    displayName: email.split('@')[0],
-    photoURL: `https://api.dicebear.com/6.x/avataaars/svg?seed=${email}`,
+    uid: `user-${username}`,
+    email: null,
+    displayName: username,
+    photoURL: `https://api.dicebear.com/6.x/avataaars/svg?seed=${username}`,
     emailVerified: true,
     getIdToken: async () => "mock-id-token-456",
   };
@@ -71,18 +71,18 @@ export const signInWithEmail = async (email: string, password: string): Promise<
   return mockUser;
 };
 
-// Sign up with email and password
-export const signUpWithEmail = async (email: string, password: string, username?: string): Promise<User> => {
-  console.log(`Mock sign up with email: ${email}, username: ${username || 'not provided'}`);
+// Sign up with username and password
+export const signUpWithEmail = async (username: string, password: string): Promise<User> => {
+  console.log(`Mock sign up with username: ${username}`);
   if (password.length < 6) {
     throw new Error("Password must be at least 6 characters");
   }
   
   const mockUser: User = {
-    uid: `email-user-${email.replace('@', '-at-')}`,
-    email: email,
-    displayName: username || email.split('@')[0],
-    photoURL: `https://api.dicebear.com/6.x/avataaars/svg?seed=${email}`,
+    uid: `user-${username}`,
+    email: null,
+    displayName: username,
+    photoURL: `https://api.dicebear.com/6.x/avataaars/svg?seed=${username}`,
     emailVerified: true,
     getIdToken: async () => "mock-id-token-789",
   };

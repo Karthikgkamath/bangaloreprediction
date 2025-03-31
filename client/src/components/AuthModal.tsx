@@ -10,13 +10,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
+  username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
 });
 
 const signupSchema = z.object({
   username: z.string().min(1, "Username is required"),
-  email: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -39,7 +38,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
+      username: "",
       password: "",
     },
   });
@@ -48,7 +47,6 @@ export default function AuthModal({ onClose }: AuthModalProps) {
     resolver: zodResolver(signupSchema),
     defaultValues: {
       username: "",
-      email: "",
       password: "",
       confirmPassword: "",
     },
@@ -56,27 +54,28 @@ export default function AuthModal({ onClose }: AuthModalProps) {
 
   const onLoginSubmit = async (data: LoginFormValues) => {
     try {
-      await signInWithEmail(data.email, data.password);
+      // Using username instead of email
+      await signInWithEmail(data.username, data.password);
       onClose();
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Login Failed",
-        description: "Invalid email or password. Please try again.",
+        description: "Invalid username or password. Please try again.",
       });
     }
   };
 
   const onSignupSubmit = async (data: SignupFormValues) => {
     try {
-      // Pass the username, email, and password
-      await signUpWithEmail(data.email, data.password, data.username);
+      // Pass the username and password
+      await signUpWithEmail(data.username, data.password);
       onClose();
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Registration Failed",
-        description: "This email might already be in use or there was a server error.",
+        description: "This username might already be in use or there was a server error.",
       });
     }
   };
@@ -129,13 +128,14 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                 <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
                   <FormField
                     control={loginForm.control}
-                    name="email"
+                    name="username"
                     render={({ field }) => (
                       <FormItem className="space-y-2">
-                        <FormLabel>Email</FormLabel>
+                        <FormLabel>Username</FormLabel>
                         <FormControl>
                           <Input 
                             {...field} 
+                            placeholder="Enter your username"
                             className="w-full px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
                           />
                         </FormControl>
@@ -157,6 +157,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                           <Input 
                             {...field} 
                             type="password" 
+                            placeholder="Enter your password"
                             className="w-full px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
                           />
                         </FormControl>
@@ -187,23 +188,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                         <FormControl>
                           <Input 
                             {...field} 
-                            className="w-full px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={signupForm.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel>Email</FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field} 
+                            placeholder="Choose a username"
                             className="w-full px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
                           />
                         </FormControl>
@@ -222,6 +207,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                           <Input 
                             {...field} 
                             type="password" 
+                            placeholder="Choose a password"
                             className="w-full px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
                           />
                         </FormControl>
@@ -240,6 +226,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
                           <Input 
                             {...field} 
                             type="password" 
+                            placeholder="Confirm your password"
                             className="w-full px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
                           />
                         </FormControl>

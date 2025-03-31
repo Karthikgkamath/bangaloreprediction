@@ -13,8 +13,8 @@ interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
   signInWithGoogle: () => Promise<User>;
-  signInWithEmail: (email: string, password: string) => Promise<User>;
-  signUpWithEmail: (email: string, password: string, username?: string) => Promise<User>;
+  signInWithEmail: (username: string, password: string) => Promise<User>;
+  signUpWithEmail: (username: string, password: string) => Promise<User>;
   logOut: () => Promise<void>;
 }
 
@@ -75,37 +75,39 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  // Handle Email/Password sign in
-  const handleSignInWithEmail = async (email: string, password: string) => {
+  // Handle Username/Password sign in
+  const handleSignInWithEmail = async (username: string, password: string) => {
     try {
-      const user = await signInWithEmail(email, password);
+      console.log("Mock sign in with username:", username);
+      const user = await signInWithEmail(username, password);
       toast({
         title: "Success!",
         description: "You have successfully signed in.",
       });
       return user;
     } catch (error) {
-      console.error("Error signing in with email/password:", error);
+      console.error("Error signing in with username/password:", error);
       toast({
         variant: "destructive", 
         title: "Sign In Failed",
-        description: "Invalid email or password. Please try again.",
+        description: "Invalid username or password. Please try again.",
       });
       throw error;
     }
   };
 
-  // Handle Email/Password sign up
-  const handleSignUpWithEmail = async (email: string, password: string, username?: string) => {
+  // Handle Username/Password sign up
+  const handleSignUpWithEmail = async (username: string, password: string) => {
     try {
-      const user = await signUpWithEmail(email, password, username);
+      console.log("Mock sign up with username:", username);
+      const user = await signUpWithEmail(username, password);
       toast({
         title: "Account Created!",
-        description: `Welcome, ${username || email.split('@')[0]}! Your account has been created successfully.`,
+        description: `Welcome, ${username}! Your account has been created successfully.`,
       });
       return user;
     } catch (error) {
-      console.error("Error signing up with email/password:", error);
+      console.error("Error signing up with username/password:", error);
       toast({
         variant: "destructive",
         title: "Sign Up Failed",
