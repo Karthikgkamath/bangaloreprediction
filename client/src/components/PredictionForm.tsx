@@ -13,6 +13,10 @@ import { Prediction } from "@/types";
 const predictionFormSchema = z.object({
   region: z.string().min(1, "Region is required"),
   preciseLocation: z.string().min(1, "Precise location is required"),
+  coordinates: z.object({
+    lat: z.number(),
+    lng: z.number()
+  }).optional(),
   bhk: z.string().min(1, "BHK is required"),
   bathrooms: z.string().min(1, "Bathrooms are required"),
   squareFeet: z.coerce.number().min(1, "Area is required"),
@@ -31,13 +35,19 @@ interface PredictionFormProps {
   setSelectedRegion: (region: string) => void;
   onPrediction: (prediction: Prediction) => void;
   setLoading: (loading: boolean) => void;
+  selectedLocation?: {
+    lat: number;
+    lng: number;
+    address: string;
+  };
 }
 
 export default function PredictionForm({ 
   selectedRegion, 
   setSelectedRegion, 
   onPrediction,
-  setLoading
+  setLoading,
+  selectedLocation
 }: PredictionFormProps) {
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -57,6 +67,7 @@ export default function PredictionForm({
     defaultValues: {
       region: selectedRegion,
       preciseLocation: "",
+      coordinates: undefined,
       bhk: "",
       bathrooms: "",
       squareFeet: 0,
@@ -68,39 +79,6 @@ export default function PredictionForm({
       powerBackup: false,
     },
   });
-
-  // Update form when selectedRegion changes from external source (map)
-  // Using useEffect to avoid unnecessary re-renders
-  useEffect(() => {
-    if (selectedRegion && selectedRegion !== form.getValues("region")) {
-      form.setValue("region", selectedRegion);
-      
-      // Auto-fill approximate location based on region
-      const regionLabel = regions.find(r => r.value === selectedRegion)?.label;
-      if (regionLabel) {
-        // Only autofill if the location field is empty
-        if (!form.getValues("preciseLocation")) {
-          form.setValue("preciseLocation", `${regionLabel}, Bangalore`);
-        }
-      }
-    }
-  }, [selectedRegion, form, regions]);
-
-  const bhkOptions = [
-    { value: "1", label: "1 BHK" },
-    { value: "2", label: "2 BHK" },
-    { value: "3", label: "3 BHK" },
-    { value: "4", label: "4 BHK" },
-    { value: "5", label: "5 BHK" },
-  ];
-
-  const bathroomOptions = [
-    { value: "1", label: "1" },
-    { value: "2", label: "2" },
-    { value: "3", label: "3" },
-    { value: "4", label: "4" },
-    { value: "5", label: "5" },
-  ];
 
   const onSubmit = async (data: PredictionFormValues) => {
     try {
@@ -121,6 +99,58 @@ export default function PredictionForm({
       setLoading(false);
     }
   };
+
+  // Update form when selectedRegion changes from external source (map)
+  useEffect(() => {
+    if (selectedRegion && selectedRegion !== form.getValues("region")) {
+      form.setValue("region", selectedRegion);
+      
+      // Auto-fill approximate location based on region
+      const regionLabel = regions.find(r => r.value === selectedRegion)?.label;
+      if (regionLabel && !form.getValues("preciseLocation")) {
+        form.setValue("preciseLocation", `${regionLabel}, Bangalore`);
+      }
+    }
+  }, [selectedRegion, form, regions]);
+
+  // Update location when selected from the map
+  useEffect(() => {
+    if (selectedLocation) {
+      // Update the precise location with the address from the map
+      form.setValue("preciseLocation", selectedLocation.address);
+      form.setValue("coordinates", {
+        lat: selectedLocation.lat,
+        lng: selectedLocation.lng
+      });
+      
+      // Try to determine the region from the address
+      const address = selectedLocation.address.toLowerCase();
+      const matchedRegion = regions.find(region => 
+        address.includes(region.label.toLowerCase())
+      );
+      
+      if (matchedRegion) {
+        form.setValue("region", matchedRegion.value);
+        setSelectedRegion(matchedRegion.value);
+      }
+    }
+  }, [selectedLocation, form, regions, setSelectedRegion]);
+
+  const bhkOptions = [
+    { value: "1", label: "1 BHK" },
+    { value: "2", label: "2 BHK" },
+    { value: "3", label: "3 BHK" },
+    { value: "4", label: "4 BHK" },
+    { value: "5", label: "5 BHK" },
+  ];
+
+  const bathroomOptions = [
+    { value: "1", label: "1" },
+    { value: "2", label: "2" },
+    { value: "3", label: "3" },
+    { value: "4", label: "4" },
+    { value: "5", label: "5" },
+  ];
 
   return (
     <Form {...form}>
@@ -165,21 +195,16 @@ export default function PredictionForm({
               <FormItem>
                 <FormLabel>Precise Location</FormLabel>
                 <FormControl>
-                  <Input
-                    placeholder="e.g., 12th Cross, 5th Main"
-                    {...field}
-                  />
+                  <Input {...field} />
                 </FormControl>
                 <FormDescription>
-                  Enter the precise location within the region
+                  Address from map selection or enter manually
                 </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          
           <FormField
             control={form.control}
             name="bhk"
@@ -198,6 +223,9 @@ export default function PredictionForm({
                     ))}
                   </SelectContent>
                 </Select>
+                <FormDescription>
+                  Number of bedrooms
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -212,7 +240,7 @@ export default function PredictionForm({
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select Bathrooms" />
+                      <SelectValue placeholder="Select bathrooms" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -221,6 +249,9 @@ export default function PredictionForm({
                     ))}
                   </SelectContent>
                 </Select>
+                <FormDescription>
+                  Number of bathrooms
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -231,33 +262,36 @@ export default function PredictionForm({
             name="squareFeet"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Area (sq.ft)</FormLabel>
+                <FormLabel>Area (sq ft)</FormLabel>
                 <FormControl>
                   <Input 
                     type="number" 
-                    min="1"
-                    placeholder="e.g., 1200" 
-                    {...field}
-                    onChange={e => field.onChange(e.target.valueAsNumber)}
+                    {...field} 
+                    onChange={(e) => field.onChange(e.target.valueAsNumber)}
                   />
                 </FormControl>
+                <FormDescription>
+                  Total built-up area
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
           />
         </div>
-
+        
         <div className="space-y-4">
-          <h3 className="text-md font-medium">Amenities</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <h3 className="text-lg font-medium">Additional Amenities</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <FormField
               control={form.control}
               name="parking"
               render={({ field }) => (
-                <FormItem className="flex items-center justify-between space-y-0 rounded-lg border p-3 shadow-sm">
-                  <div className="space-y-0.5">
+                <FormItem className="flex flex-row items-center justify-between space-x-3 space-y-0 rounded-md border p-4">
+                  <div className="space-y-1 leading-none">
                     <FormLabel>Parking</FormLabel>
-                    <FormDescription>Dedicated parking spot</FormDescription>
+                    <FormDescription>
+                      Dedicated parking space
+                    </FormDescription>
                   </div>
                   <FormControl>
                     <Switch
@@ -273,10 +307,12 @@ export default function PredictionForm({
               control={form.control}
               name="garden"
               render={({ field }) => (
-                <FormItem className="flex items-center justify-between space-y-0 rounded-lg border p-3 shadow-sm">
-                  <div className="space-y-0.5">
+                <FormItem className="flex flex-row items-center justify-between space-x-3 space-y-0 rounded-md border p-4">
+                  <div className="space-y-1 leading-none">
                     <FormLabel>Garden</FormLabel>
-                    <FormDescription>Private or shared garden</FormDescription>
+                    <FormDescription>
+                      Private or common garden
+                    </FormDescription>
                   </div>
                   <FormControl>
                     <Switch
@@ -292,10 +328,12 @@ export default function PredictionForm({
               control={form.control}
               name="swimmingPool"
               render={({ field }) => (
-                <FormItem className="flex items-center justify-between space-y-0 rounded-lg border p-3 shadow-sm">
-                  <div className="space-y-0.5">
+                <FormItem className="flex flex-row items-center justify-between space-x-3 space-y-0 rounded-md border p-4">
+                  <div className="space-y-1 leading-none">
                     <FormLabel>Swimming Pool</FormLabel>
-                    <FormDescription>Access to swimming pool</FormDescription>
+                    <FormDescription>
+                      Access to swimming pool
+                    </FormDescription>
                   </div>
                   <FormControl>
                     <Switch
@@ -311,10 +349,12 @@ export default function PredictionForm({
               control={form.control}
               name="gym"
               render={({ field }) => (
-                <FormItem className="flex items-center justify-between space-y-0 rounded-lg border p-3 shadow-sm">
-                  <div className="space-y-0.5">
+                <FormItem className="flex flex-row items-center justify-between space-x-3 space-y-0 rounded-md border p-4">
+                  <div className="space-y-1 leading-none">
                     <FormLabel>Gym</FormLabel>
-                    <FormDescription>Access to fitness center</FormDescription>
+                    <FormDescription>
+                      Access to fitness center
+                    </FormDescription>
                   </div>
                   <FormControl>
                     <Switch
@@ -330,10 +370,12 @@ export default function PredictionForm({
               control={form.control}
               name="security"
               render={({ field }) => (
-                <FormItem className="flex items-center justify-between space-y-0 rounded-lg border p-3 shadow-sm">
-                  <div className="space-y-0.5">
+                <FormItem className="flex flex-row items-center justify-between space-x-3 space-y-0 rounded-md border p-4">
+                  <div className="space-y-1 leading-none">
                     <FormLabel>Security</FormLabel>
-                    <FormDescription>24/7 security service</FormDescription>
+                    <FormDescription>
+                      24x7 security service
+                    </FormDescription>
                   </div>
                   <FormControl>
                     <Switch
@@ -349,10 +391,12 @@ export default function PredictionForm({
               control={form.control}
               name="powerBackup"
               render={({ field }) => (
-                <FormItem className="flex items-center justify-between space-y-0 rounded-lg border p-3 shadow-sm">
-                  <div className="space-y-0.5">
+                <FormItem className="flex flex-row items-center justify-between space-x-3 space-y-0 rounded-md border p-4">
+                  <div className="space-y-1 leading-none">
                     <FormLabel>Power Backup</FormLabel>
-                    <FormDescription>Backup generator</FormDescription>
+                    <FormDescription>
+                      Power backup available
+                    </FormDescription>
                   </div>
                   <FormControl>
                     <Switch

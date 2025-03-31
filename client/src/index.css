@@ -3,67 +3,118 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+  }
+}
+
+@layer base {
   * {
     @apply border-border;
   }
-
   body {
-    @apply font-sans antialiased bg-background text-foreground;
-  }
-  
-  /* Reduce placeholder visibility */
-  ::placeholder {
-    @apply opacity-40;
+    @apply bg-background text-foreground;
   }
 }
 
 @layer utilities {
-  .bg-mesh {
-    background-image: radial-gradient(at 40% 20%, rgba(109, 40, 217, 0.2) 0px, transparent 50%),
-      radial-gradient(at 80% 80%, rgba(14, 165, 233, 0.2) 0px, transparent 50%),
-      radial-gradient(at 10% 70%, rgba(236, 72, 153, 0.2) 0px, transparent 50%);
-  }
-
-  .glass {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .dark .glass {
-    background: rgba(15, 23, 42, 0.65);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-  }
-
-  .glow {
-    box-shadow: 0 0 20px rgba(109, 40, 217, 0.3);
-  }
-
-  .dark .glow {
-    box-shadow: 0 0 25px rgba(109, 40, 217, 0.5);
-  }
-
   .animate-gradient-x {
-    background-size: 200% 200%;
-    animation: gradient-x 10s ease infinite;
-  }
-
-  .animate-float {
-    animation: float 3s ease-in-out infinite;
+    background-size: 300% 300%;
+    animation: gradient-x 8s ease infinite;
   }
 
   .animate-pulse-slow {
-    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
+  .animate-orbit {
+    animation-name: orbit;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
+
+  .animate-blink {
+    animation: blink 1s step-end infinite;
+  }
+  
+  .animate-shimmer {
+    animation: shimmer 2s infinite;
+  }
+
+  .animate-float-random {
+    animation: float-random 5s ease-in-out infinite;
+  }
+
+  .animate-spin-slow {
+    animation: spin-slow 6s linear infinite;
+  }
+
+  .bg-size-200 {
+    background-size: 200% 100%;
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-white/90 dark:bg-slate-900/80 backdrop-blur-md;
+  }
+
+  /* Glow effect */
+  .glow {
+    box-shadow: 0 0 20px theme('colors.primary.500/20');
+    transition: box-shadow 0.3s ease;
+  }
+  
+  .glow:hover {
+    box-shadow: 0 0 30px theme('colors.primary.500/30');
+  }
+
+  /* Shine effect for buttons */
   .shine-effect {
     position: relative;
     overflow: hidden;
   }
-
+  
   .shine-effect::after {
     content: '';
     position: absolute;
@@ -74,33 +125,77 @@
     background: linear-gradient(
       to right,
       rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0.3) 50%,
+      rgba(255, 255, 255, 0.2) 50%,
       rgba(255, 255, 255, 0) 100%
     );
     transform: rotate(30deg);
-    animation: shine 6s infinite linear;
+    transition: transform 0.7s;
+    pointer-events: none;
   }
-
-  @keyframes gradient-x {
-    0%, 100% {
-      background-position: left center;
-    }
-    50% {
-      background-position: right center;
-    }
+  
+  .shine-effect:hover::after {
+    transform: rotate(30deg) translate(150%, -150%);
   }
+}
 
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+@keyframes gradient-x {
+  0%, 100% {
+    background-position: 0% 50%;
   }
+  50% {
+    background-position: 100% 50%;
+  }
+}
 
-  @keyframes shine {
-    from {
-      transform: translateX(-100%) rotate(30deg);
-    }
-    to {
-      transform: translateX(100%) rotate(30deg);
-    }
+/* Orbiting animation for loading indicator */
+@keyframes orbit {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Blinking cursor animation */
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Shimmer animation for progress bar */
+@keyframes shimmer {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Random floating animation for particle effects */
+@keyframes float-random {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(calc(var(--random-x, 10) * 1px), calc(var(--random-y, 10) * 1px));
+  }
+  50% {
+    transform: translate(calc(var(--random-x, -5) * 1px), calc(var(--random-y, -5) * 1px));
+  }
+  75% {
+    transform: translate(calc(var(--random-x, -10) * 1px), calc(var(--random-y, 5) * 1px));
+  }
+}
+
+/* Slow spinning animation */
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
   }
 }

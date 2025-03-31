@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import BangaloreMap from "@/components/BangaloreMap";
+import BangaloreOpenStreetMap from "@/components/OpenStreetMap";
 import PredictionForm from "@/components/PredictionForm";
 import LoadingState from "@/components/LoadingState";
 import PredictionResult from "@/components/PredictionResult";
@@ -12,10 +12,16 @@ export default function Dashboard() {
   const [selectedRegion, setSelectedRegion] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [prediction, setPrediction] = useState<Prediction | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<{lat: number; lng: number; address: string} | undefined>(undefined);
 
   const handleRegionSelect = (region: string) => {
     setSelectedRegion(region);
     setPrediction(null); // Reset prediction when region changes
+  };
+
+  const handleLocationSelect = (location: {lat: number; lng: number; address: string}) => {
+    setSelectedLocation(location);
+    setPrediction(null); // Reset prediction when location changes
   };
 
   const handlePrediction = (predictionData: Prediction) => {
@@ -47,7 +53,9 @@ export default function Dashboard() {
                 Select Location
               </h2>
               
-              <BangaloreMap onSelectRegion={handleRegionSelect} />
+              <div className="h-[300px] md:h-[400px]">
+                <BangaloreOpenStreetMap onSelectLocation={handleLocationSelect} />
+              </div>
             </div>
           </div>
           
@@ -65,6 +73,7 @@ export default function Dashboard() {
                 setSelectedRegion={setSelectedRegion}
                 onPrediction={handlePrediction}
                 setLoading={setIsLoading}
+                selectedLocation={selectedLocation}
               />
             </div>
           </div>
