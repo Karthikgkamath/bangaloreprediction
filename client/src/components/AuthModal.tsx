@@ -1,33 +1,8 @@
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-
-const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
-});
-
-const signupSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string().min(1, "Please confirm your password"),
-}).refine((data) => {
-  // Only check if passwords match when both are filled
-  return !data.password || !data.confirmPassword || data.password === data.confirmPassword;
-}, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"]
-});
-
-type LoginFormValues = z.infer<typeof loginSchema>;
-type SignupFormValues = z.infer<typeof signupSchema>;
 
 interface AuthModalProps {
   onClose: () => void;
@@ -37,56 +12,80 @@ export default function AuthModal({ onClose }: AuthModalProps) {
   const [isLogin, setIsLogin] = useState(true);
   const { signInWithEmail, signUpWithEmail } = useAuth();
   const { toast } = useToast();
-
-  const loginForm = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-    },
-    mode: "onBlur", // Only validate when field loses focus
-  });
-
-  const signupForm = useForm<SignupFormValues>({
-    resolver: zodResolver(signupSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-      confirmPassword: "",
-    },
-    mode: "onBlur", // Only validate when field loses focus
-  });
+  
+  // Login form state
+  const [loginUsername, setLoginUsername] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginErrors, setLoginErrors] = useState<{username?: string, password?: string}>({});
+  
+  // Signup form state
+  const [signupUsername, setSignupUsername] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
+  const [signupErrors, setSignupErrors] = useState<{username?: string, password?: string, confirmPassword?: string}>({});
 
   // Reset forms when switching tabs
   const handleFormSwitch = (switchToLogin: boolean) => {
-    loginForm.reset();
-    signupForm.reset();
+    setLoginUsername("");
+    setLoginPassword("");
+    setLoginErrors({});
+    
+    setSignupUsername("");
+    setSignupPassword("");
+    setSignupConfirmPassword("");
+    setSignupErrors({});
+    
     setIsLogin(switchToLogin);
   };
 
-  const onLoginSubmit = async (data: LoginFormValues) => {
+  const validateLogin = () => {
+    const errors: {username?: string, password?: string} = {};
+    
+    if (!loginUsername) {
+      errors.username = "Username is required";
+    }
+    
+    if (!loginPassword) {
+      errors.password = "Password is required";
+    }
+    
+    setLoginErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+  
+  const validateSignup = () => {
+    const errors: {username?: string, password?: string, confirmPassword?: string} = {};
+    
+    if (!signupUsername) {
+      errors.username = "Username is required";
+    }
+    
+    if (!signupPassword) {
+      errors.password = "Password is required";
+    } else if (signupPassword.length < 6) {
+      errors.password = "Password must be at least 6 characters";
+    }
+    
+    if (!signupConfirmPassword) {
+      errors.confirmPassword = "Please confirm your password";
+    } else if (signupPassword !== signupConfirmPassword) {
+      errors.confirmPassword = "Passwords do not match";
+    }
+    
+    setSignupErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const onLoginSubmit = async () => {
     try {
-      // Check for any form errors before attempting submission
-      const errors = loginForm.formState.errors;
-      if (Object.keys(errors).length > 0) {
-        console.log("Form has errors, cannot submit:", errors);
-        return; // Don't proceed with submission if there are errors
-      }
-      
-      console.log("Login submission data:", data);
-      
-      if (!data.username || !data.password) {
-        console.error("Missing required fields");
-        toast({
-          variant: "destructive",
-          title: "Login Failed",
-          description: "Please fill in all required fields.",
-        });
+      if (!validateLogin()) {
         return;
       }
       
+      console.log("Login submission data:", { username: loginUsername, password: loginPassword });
+      
       // Using username instead of email
-      await signInWithEmail(data.username, data.password);
+      await signInWithEmail(loginUsername, loginPassword);
       toast({
         title: "Login Successful",
         description: "You have successfully logged in.",
@@ -102,39 +101,20 @@ export default function AuthModal({ onClose }: AuthModalProps) {
     }
   };
 
-  const onSignupSubmit = async (data: SignupFormValues) => {
+  const onSignupSubmit = async () => {
     try {
-      // Check for any form errors before attempting submission
-      const errors = signupForm.formState.errors;
-      if (Object.keys(errors).length > 0) {
-        console.log("Form has errors, cannot submit:", errors);
-        return; // Don't proceed with submission if there are errors
-      }
-      
-      console.log("Signup submission data:", data);
-      
-      if (!data.username || !data.password || !data.confirmPassword) {
-        console.error("Missing required fields");
-        toast({
-          variant: "destructive",
-          title: "Sign Up Failed",
-          description: "Please fill in all required fields.",
-        });
+      if (!validateSignup()) {
         return;
       }
       
-      if (data.password !== data.confirmPassword) {
-        console.error("Passwords don't match");
-        toast({
-          variant: "destructive",
-          title: "Sign Up Failed",
-          description: "Passwords do not match. Please try again.",
-        });
-        return;
-      }
+      console.log("Signup submission data:", { 
+        username: signupUsername, 
+        password: signupPassword,
+        confirmPassword: signupConfirmPassword 
+      });
 
       // Pass the username and password
-      await signUpWithEmail(data.username, data.password);
+      await signUpWithEmail(signupUsername, signupPassword);
       toast({
         title: "Account Created",
         description: "Your account has been created successfully!",
@@ -194,127 +174,102 @@ export default function AuthModal({ onClose }: AuthModalProps) {
             </div>
             
             {isLogin ? (
-              <Form {...loginForm}>
-                <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
-                  <FormField
-                    control={loginForm.control}
-                    name="username"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel>Username</FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field} 
-                            placeholder="Enter your username"
-                            className="w-full px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="login-username" className="text-sm font-medium">Username</label>
+                  <input 
+                    id="login-username"
+                    type="text" 
+                    value={loginUsername}
+                    onChange={(e) => setLoginUsername(e.target.value)}
+                    placeholder="Enter your username"
+                    className="w-full px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
                   />
-                  
-                  <FormField
-                    control={loginForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <div className="flex justify-between">
-                          <FormLabel>Password</FormLabel>
-                          <a href="#" className="text-xs text-primary-600 hover:text-primary-500">Forgot password?</a>
-                        </div>
-                        <FormControl>
-                          <Input 
-                            {...field} 
-                            type="password" 
-                            placeholder="Enter your password"
-                            className="w-full px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                  {loginErrors.username && (
+                    <p className="text-sm text-red-500">{loginErrors.username}</p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="login-password" className="text-sm font-medium">Password</label>
+                  <input 
+                    id="login-password"
+                    type="password" 
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className="w-full px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
                   />
-                  
-                  <div className="pt-2">
-                    <Button 
-                      type="submit" 
-                      className="w-full bg-gradient-to-r from-primary-600 to-secondary-600 text-white font-medium py-3 px-4 rounded-lg transition hover:opacity-90 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:outline-none shine-effect"
-                    >
-                      Log in
-                    </Button>
-                  </div>
-                </form>
-              </Form>
+                  {loginErrors.password && (
+                    <p className="text-sm text-red-500">{loginErrors.password}</p>
+                  )}
+                </div>
+                
+                <div className="pt-2">
+                  <Button 
+                    onClick={onLoginSubmit}
+                    className="w-full bg-gradient-to-r from-primary-600 to-secondary-600 text-white font-medium py-3 px-4 rounded-lg transition hover:opacity-90 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:outline-none shine-effect"
+                  >
+                    Log in
+                  </Button>
+                </div>
+              </div>
             ) : (
-              <Form {...signupForm}>
-                <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-4">
-                  <FormField
-                    control={signupForm.control}
-                    name="username"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel>Username</FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field} 
-                            placeholder="Choose a username"
-                            className="w-full px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="signup-username" className="text-sm font-medium">Username</label>
+                  <input 
+                    id="signup-username"
+                    type="text" 
+                    value={signupUsername}
+                    onChange={(e) => setSignupUsername(e.target.value)}
+                    placeholder="Choose a username"
+                    className="w-full px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
                   />
-                  
-                  <FormField
-                    control={signupForm.control}
-                    name="password"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel>Password</FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field} 
-                            type="password" 
-                            placeholder="Choose a password"
-                            className="w-full px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                  {signupErrors.username && (
+                    <p className="text-sm text-red-500">{signupErrors.username}</p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="signup-password" className="text-sm font-medium">Password</label>
+                  <input 
+                    id="signup-password"
+                    type="password" 
+                    value={signupPassword}
+                    onChange={(e) => setSignupPassword(e.target.value)}
+                    placeholder="Choose a password"
+                    className="w-full px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
                   />
-                  
-                  <FormField
-                    control={signupForm.control}
-                    name="confirmPassword"
-                    render={({ field }) => (
-                      <FormItem className="space-y-2">
-                        <FormLabel>Confirm Password</FormLabel>
-                        <FormControl>
-                          <Input 
-                            {...field} 
-                            type="password" 
-                            placeholder="Confirm your password"
-                            className="w-full px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                  {signupErrors.password && (
+                    <p className="text-sm text-red-500">{signupErrors.password}</p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="signup-confirm-password" className="text-sm font-medium">Confirm Password</label>
+                  <input 
+                    id="signup-confirm-password"
+                    type="password" 
+                    value={signupConfirmPassword}
+                    onChange={(e) => setSignupConfirmPassword(e.target.value)}
+                    placeholder="Confirm your password"
+                    className="w-full px-4 py-3 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition"
                   />
-                  
-                  <div className="pt-2">
-                    <Button 
-                      type="submit" 
-                      className="w-full bg-gradient-to-r from-primary-600 to-secondary-600 text-white font-medium py-3 px-4 rounded-lg transition hover:opacity-90 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:outline-none shine-effect"
-                    >
-                      Create Account
-                    </Button>
-                  </div>
-                </form>
-              </Form>
+                  {signupErrors.confirmPassword && (
+                    <p className="text-sm text-red-500">{signupErrors.confirmPassword}</p>
+                  )}
+                </div>
+                
+                <div className="pt-2">
+                  <Button 
+                    onClick={onSignupSubmit}
+                    className="w-full bg-gradient-to-r from-primary-600 to-secondary-600 text-white font-medium py-3 px-4 rounded-lg transition hover:opacity-90 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:outline-none shine-effect"
+                  >
+                    Create Account
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
         </div>
