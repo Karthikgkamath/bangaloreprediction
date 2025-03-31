@@ -10,17 +10,26 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
+  username: z.string().trim().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
 });
 
 const signupSchema = z.object({
-  username: z.string().min(1, "Username is required"),
+  username: z.string().trim().min(1, "Username is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  confirmPassword: z.string().min(6, "Password must be at least 6 characters"),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords do not match",
-  path: ["confirmPassword"],
+  confirmPassword: z.string().min(1, "Please confirm your password"),
+}).superRefine((data, ctx) => {
+  // First check if both password fields are filled
+  if (!data.password || !data.confirmPassword) return;
+  
+  // Then check if they match
+  if (data.password !== data.confirmPassword) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Passwords do not match",
+      path: ["confirmPassword"]
+    });
+  }
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -41,6 +50,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
       username: "",
       password: "",
     },
+    mode: "onChange", // Validate on change for better UX
   });
 
   const signupForm = useForm<SignupFormValues>({
@@ -50,14 +60,43 @@ export default function AuthModal({ onClose }: AuthModalProps) {
       password: "",
       confirmPassword: "",
     },
+    mode: "onChange", // Validate on change for better UX
   });
+
+  // Debug form state
+  console.log("Signup form errors:", signupForm.formState.errors);
+  console.log("Form values:", signupForm.watch());
 
   const onLoginSubmit = async (data: LoginFormValues) => {
     try {
+      // Check for any form errors before attempting submission
+      const errors = loginForm.formState.errors;
+      if (Object.keys(errors).length > 0) {
+        console.log("Form has errors, cannot submit:", errors);
+        return; // Don't proceed with submission if there are errors
+      }
+      
+      console.log("Login submission data:", data);
+      
+      if (!data.username || !data.password) {
+        console.error("Missing required fields");
+        toast({
+          variant: "destructive",
+          title: "Login Failed",
+          description: "Please fill in all required fields.",
+        });
+        return;
+      }
+      
       // Using username instead of email
       await signInWithEmail(data.username, data.password);
+      toast({
+        title: "Login Successful",
+        description: "You have successfully logged in.",
+      });
       onClose();
     } catch (error) {
+      console.error("Login error:", error);
       toast({
         variant: "destructive",
         title: "Login Failed",
@@ -68,10 +107,44 @@ export default function AuthModal({ onClose }: AuthModalProps) {
 
   const onSignupSubmit = async (data: SignupFormValues) => {
     try {
+      // Check for any form errors before attempting submission
+      const errors = signupForm.formState.errors;
+      if (Object.keys(errors).length > 0) {
+        console.log("Form has errors, cannot submit:", errors);
+        return; // Don't proceed with submission if there are errors
+      }
+      
+      console.log("Signup submission data:", data);
+      
+      if (!data.username || !data.password || !data.confirmPassword) {
+        console.error("Missing required fields");
+        toast({
+          variant: "destructive",
+          title: "Sign Up Failed",
+          description: "Please fill in all required fields.",
+        });
+        return;
+      }
+      
+      if (data.password !== data.confirmPassword) {
+        console.error("Passwords don't match");
+        toast({
+          variant: "destructive",
+          title: "Sign Up Failed",
+          description: "Passwords do not match. Please try again.",
+        });
+        return;
+      }
+
       // Pass the username and password
       await signUpWithEmail(data.username, data.password);
+      toast({
+        title: "Account Created",
+        description: "Your account has been created successfully!",
+      });
       onClose();
     } catch (error) {
+      console.error("Sign up error:", error);
       toast({
         variant: "destructive",
         title: "Registration Failed",

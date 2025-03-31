@@ -199,3 +199,28 @@
     transform: rotate(360deg);
   }
 }
+
+/* Improved form input styling */
+.dark input {
+  color: #f3f4f6 !important; /* Light text in dark mode */
+}
+
+/* Fix input visibility in dark mode */
+.dark input::placeholder {
+  color: rgba(156, 163, 175, 0.7); /* Slightly lighter text for placeholders in dark mode */
+}
+
+/* Ensure form errors are visible */
+.text-destructive {
+  color: #e11d48 !important; /* Ensure error text is always red and visible */
+}
+
+/* Improve input backgrounds contrast in dark mode */
+.dark input[type="text"],
+.dark input[type="password"],
+.dark input[type="email"],
+.dark input[type="number"],
+.dark textarea {
+  background-color: rgba(30, 41, 59, 0.8) !important; /* Slightly lighter dark background */
+  border-color: rgba(71, 85, 105, 0.5) !important; /* Visible border */
+}
