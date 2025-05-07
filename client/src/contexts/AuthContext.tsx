@@ -6,8 +6,8 @@ import {
   signUpWithEmail,
   logOut,
   User
-} from "@/lib/firebase";
-import { useToast } from "@/hooks/use-toast";
+} from "../lib/firebase";
+import { useToast } from "../hooks/use-toast";
 
 interface AuthContextType {
   currentUser: User | null;

@@ -1,8 +1,19 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { connectToDatabase, insertUser, loginUser } from './config/mongodb';
+import cors from 'cors';
 
 const app = express();
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -36,6 +47,51 @@ app.use((req, res, next) => {
   next();
 });
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok', message: 'Server is running' });
+});
+
+// Example route to create a user
+app.post('/api/users', async (req, res) => {
+    try {
+        const { name } = req.body;
+        const result = await insertUser({ name });
+        res.status(201).json(result);
+    } catch (error) {
+        console.error('Error creating user:', error);
+        res.status(500).json({ error: 'Failed to create user' });
+    }
+});
+
+// Login route
+app.post('/api/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const result = await loginUser(email, password);
+        
+        if (result.success) {
+            res.status(200).json(result);
+        } else {
+            res.status(401).json(result);
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ success: false, message: 'Login failed' });
+    }
+});
+
+app.get('/api/users', async (req, res) => {
+    try {
+        const db = await connectToDatabase();
+        const users = await db.collection('users').find({}).toArray();
+        res.json(users);
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        res.status(500).json({ error: 'Failed to fetch users' });
+    }
+});
+
 (async () => {
   const server = await registerRoutes(app);
 
@@ -56,12 +112,18 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
-  server.listen(port,()=>{
-    
-    log(`serving on port ${port}`);
-  });
+  try {
+    // Connect to MongoDB first
+    await connectToDatabase();
+    console.log('MongoDB connected successfully');
+
+    // Then start the server
+    const port = 5000; // Fixed port 5000
+    server.listen(port, () => {
+      log(`Server running on port ${port}`);
+    });
+  } catch (err) {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  }
 })();

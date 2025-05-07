@@ -6,6 +6,7 @@ import PredictionForm from "@/components/PredictionForm";
 import LoadingState from "@/components/LoadingState";
 import PredictionResult from "@/components/PredictionResult";
 import RecentPredictions from "@/components/RecentPredictions";
+import UserList from "@/components/UserList";
 import { Prediction } from "@/types";
 
 export default function Dashboard() {
@@ -88,6 +89,11 @@ export default function Dashboard() {
         
         {/* Recent Predictions */}
         <RecentPredictions />
+        
+        {/* User List Section */}
+        <div className="mt-8 glass rounded-2xl glow overflow-hidden">
+          <UserList />
+        </div>
       </main>
       <Footer />
     </>
