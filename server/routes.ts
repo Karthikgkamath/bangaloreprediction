@@ -137,30 +137,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { email, password } = req.body;
       
       if (!email || !password) {
-        return res.status(400).json({ message: "Missing email or password" });
+        return res.status(400).json({ 
+          success: false,
+          message: "Email and password are required" 
+        });
       }
       
       // Find user
       const user = await storage.getUserByEmail(email);
       
-      if (!user || !user.password) {
-        return res.status(401).json({ message: "Invalid email or password" });
+      if (!user) {
+        return res.status(401).json({ 
+          success: false,
+          message: "Invalid email or password" 
+        });
       }
       
-      // Compare password
-      const isValidPassword = await bcrypt.compare(password, user.password);
-      
-      if (!isValidPassword) {
-        return res.status(401).json({ message: "Invalid email or password" });
+      // Check if user has a password (might be Google auth user)
+      if (!user.password) {
+        return res.status(401).json({ 
+          success: false,
+          message: "Please use Google login for this account" 
+        });
       }
       
-      // Don't send password back
+      // Verify password using the new method
+      const passwordMatch = await storage.verifyPassword(email, password);
+      
+      if (!passwordMatch) {
+        return res.status(401).json({ 
+          success: false,
+          message: "Invalid email or password" 
+        });
+      }
+      
+      // Only if all checks pass
       const { password: _, ...userWithoutPassword } = user;
       
-      return res.status(200).json({ user: userWithoutPassword });
+      return res.status(200).json({ 
+        success: true,
+        user: userWithoutPassword 
+      });
     } catch (error) {
       console.error("Login error:", error);
-      return res.status(500).json({ message: "Login failed" });
+      return res.status(500).json({ 
+        success: false,
+        message: "Login failed" 
+      });
     }
   });
 

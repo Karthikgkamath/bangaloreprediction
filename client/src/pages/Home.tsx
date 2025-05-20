@@ -66,28 +66,28 @@ export default function Home() {
     }
   }, []);
 
-  const images = [
-    {
-      src: '/images/bangalore_city.jpg',
-      text: `Finding the perfect house in Bangalore is a real challenge.\nThe city is vast, and every area feels different.\nWhat suits one person may not suit another.`
-    },
-    {
-      src: '/images/blr.jpg',
-      text: `Prices for similar homes can vary wildly from one neighborhood to the next.\nIt's hard to know if you're getting a fair deal or overpaying.\nThe lack of transparency leaves buyers confused.`
-    },
-    {
-      src: '/images/haha.jpg',
-      text: `Too many middlemen and agents complicate the process.\nEach adds their own markup, making it even harder to find the true value.\nTrust becomes a major concern for home buyers.`
-    },
-    {
-      src: '/images/map.jpg',
-      text: `Our AI model analyzes real market data and considers factors like square feet, BHK, and location.\nIt also takes into account amenities such as swimming pool, security, parking, and more.\nYou get a data-driven, unbiased price prediction.`
-    },
-    {
-      src: '/images/plot.jpg',
-      text: `With our platform, you can confidently discover the true value of any property in Bangalore.\nNo more guesswork, no more hidden costs.\nLet AI guide you to the best deal for your dream home!`
-    },
-  ];
+ const images = [
+  {
+    src: '/assets/attached_assets/bangalore_city.jpg',
+    text: `Finding the perfect house in Bangalore is a real challenge.\nThe city is vast, and every area feels different.\nWhat suits one person may not suit another.`
+  },
+  {
+    src: '/assets/attached_assets/blr.jpg',
+    text: `Prices for similar homes can vary wildly from one neighborhood to the next.\nIt's hard to know if you're getting a fair deal or overpaying.\nThe lack of transparency leaves buyers confused.`
+  },
+  {
+    src: '/assets/attached_assets/haha.jpg',
+    text: `Too many middlemen and agents complicate the process.\nEach adds their own markup, making it even harder to find the true value.\nTrust becomes a major concern for home buyers.`
+  },
+  {
+    src: '/assets/attached_assets/map.jpg',
+    text: `Our AI model analyzes real market data and considers factors like square feet, BHK, and location.\nIt also takes into account amenities such as swimming pool, security, parking, and more.\nYou get a data-driven, unbiased price prediction.`
+  },
+  {
+    src: '/assets/attached_assets/plot.jpg',
+    text: `With our platform, you can confidently discover the true value of any property in Bangalore.\nNo more guesswork, no more hidden costs.\nLet AI guide you to the best deal for your dream home!`
+  },
+];
 
   const nextImage = () => {
     setPrevIndex(currentImageIndex);
@@ -196,30 +196,34 @@ export default function Home() {
         >
           <div className="relative w-full h-full border border-sky-200/30 dark:border-sky-700/20 shadow-[0_0_30px_rgba(186,230,253,0.4)] dark:shadow-[0_0_30px_rgba(56,189,248,0.2)] rounded-xl overflow-hidden bg-white dark:bg-gray-800">
             <motion.div
-              key={currentImageIndex}
-              initial={{ x: currentImageIndex > prevIndex ? 1000 : -1000, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: currentImageIndex > prevIndex ? -1000 : 1000, opacity: 0 }}
-              transition={{ 
-                duration: 0.8,
-                ease: [0.4, 0, 0.2, 1],
-                opacity: { duration: 0.4 }
-              }}
-              className="relative h-full"
-            >
-              <img 
-                src={images[currentImageIndex].src} 
-                alt={`Image ${currentImageIndex + 1}`} 
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = 'https://placehold.co/1200x800/1e293b/94a3b8?text=Bangalore+City';
-                }}
-              />
-              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
-                <p className="text-white text-lg md:text-xl">{images[currentImageIndex].text}</p>
-              </div>
-            </motion.div>
+  key={currentImageIndex}
+  initial={{ x: currentImageIndex > prevIndex ? 1000 : -1000, opacity: 0 }}
+  animate={{ x: 0, opacity: 1 }}
+  exit={{ x: currentImageIndex > prevIndex ? -1000 : 1000, opacity: 0 }}
+  transition={{ 
+    duration: 0.8,
+    ease: [0.4, 0, 0.2, 1],
+    opacity: { duration: 0.4 }
+  }}
+  className="relative h-full"
+>
+  {/* Image */}
+  <img 
+    src={images[currentImageIndex].src} 
+    alt={`Image ${currentImageIndex + 1}`} 
+    className="w-full h-full object-cover"
+    onError={(e) => {
+      const target = e.target as HTMLImageElement;
+      target.src = 'https://placehold.co/1200x800/1e293b/94a3b8?text=Bangalore+City';
+    }}
+  />
+
+  {/* Translucent Block */}
+  <div className="absolute bottom-0 left-0 right-0 bg-blue-900/60 p-6">
+    {/* Text */}
+    <p className="text-white text-lg md:text-xl">{images[currentImageIndex].text}</p>
+  </div>
+</motion.div>
           </div>
           
           {/* Navigation Arrows */}

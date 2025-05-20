@@ -7,6 +7,7 @@ import {
   type InsertPrediction,
   type PredictionRequest
 } from "@shared/schema";
+import * as bcrypt from 'bcryptjs';
 
 export interface IStorage {
   // User methods
@@ -14,6 +15,7 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   getUserByGoogleId(googleId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  verifyPassword(email: string, password: string): Promise<boolean>;
   
   // Prediction methods
   createPrediction(prediction: InsertPrediction): Promise<Prediction>;
@@ -44,7 +46,7 @@ export class MemStorage implements IStorage {
     this.userIdCounter = 1;
     this.predictionIdCounter = 1;
     
-    // Add a test user
+    // Add a test user with hashed password
     this.createUser({
       username: 'test',
       email: 'test@example.com',
@@ -76,15 +78,29 @@ export class MemStorage implements IStorage {
     return undefined;
   }
 
+  async verifyPassword(email: string, password: string): Promise<boolean> {
+    const user = await this.getUserByEmail(email);
+    if (!user || !user.password) {
+      return false;
+    }
+    return bcrypt.compare(password, user.password);
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userIdCounter++;
     const createdAt = new Date();
+    
+    // If password is provided and not already hashed, hash it
+    let password = insertUser.password;
+    if (password && !password.startsWith('$2')) {
+      password = await bcrypt.hash(password, 10);
+    }
     
     const user: User = {
       id,
       username: insertUser.username,
       email: insertUser.email,
-      password: insertUser.password || null,
+      password: password || null,
       googleId: insertUser.googleId || null,
       displayName: insertUser.displayName || null,
       photoURL: insertUser.photoURL || null,
